@@ -381,19 +381,6 @@ def send_message():
         msg_id = res_data.get('key', {}).get('id') or res_data.get('messageId') or f"out_{int(now.timestamp())}"
         contact_id = f"c_{number}_{inst}"
         
-        # Salvar mensagem no Banco SE NÃO EXISTIR
-        if not Message.query.get(msg_id):
-            new_msg = Message(
-                id=msg_id,
-                contact_id=contact_id,
-                text=text,
-                type='out',
-                time=time_str,
-                timestamp=int(now.timestamp()),
-                instance=inst
-            )
-            db_sql.session.add(new_msg)
-        
         # Atualizar ou Criar Contato
         contact = Contact.query.filter_by(id=contact_id).first()
         if contact:
@@ -412,6 +399,21 @@ def send_message():
                 unread=0
             )
             db_sql.session.add(new_contact)
+        
+        db_sql.session.flush()
+
+        # Salvar mensagem no Banco SE NÃO EXISTIR
+        if not Message.query.get(msg_id):
+            new_msg = Message(
+                id=msg_id,
+                contact_id=contact_id,
+                text=text,
+                type='out',
+                time=time_str,
+                timestamp=int(now.timestamp()),
+                instance=inst
+            )
+            db_sql.session.add(new_msg)
         
         # --- Forward to N8N (Attendant Message) ---
         webhook_key = f"n8n_webhook_{inst}"
@@ -741,18 +743,6 @@ def bot_message_webhook():
         time_str = now.strftime("%H:%M")
         contact_id = f"c_{phone}_{inst}"
         
-        # Save Message
-        new_msg = Message(
-            id=msg_id,
-            contact_id=contact_id,
-            text=text,
-            type='out',
-            time=time_str,
-            timestamp=int(now.timestamp()),
-            instance=inst
-        )
-        db_sql.session.add(new_msg)
-        
         # Update Contact
         contact = Contact.query.filter_by(id=contact_id).first()
         if contact:
@@ -766,6 +756,20 @@ def bot_message_webhook():
             )
             db_sql.session.add(new_contact)
             
+        db_sql.session.flush()
+
+        # Save Message
+        new_msg = Message(
+            id=msg_id,
+            contact_id=contact_id,
+            text=text,
+            type='out',
+            time=time_str,
+            timestamp=int(now.timestamp()),
+            instance=inst
+        )
+        db_sql.session.add(new_msg)
+        
         db_sql.session.commit()
         
         # Emit to frontend
@@ -852,6 +856,8 @@ def webhook():
                 if not fromMe:
                     contact.unread = (contact.unread or 0) + 1
             
+            db_sql.session.flush()
+
             # Save Message
             msg_id = key.get('id')
             if not Message.query.get(msg_id):
