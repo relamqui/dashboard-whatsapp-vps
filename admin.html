@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WP CRM — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <style>
+    body { height: auto; overflow: auto; }
+    .admin-container { padding: 40px; max-width: 1000px; margin: 0 auto; }
+    .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
+    .user-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 20px; position: relative; }
+    .user-info { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .user-circle { width: 48px; height: 48px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; color: white; }
+    .instances-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .instance-link-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px; }
+    .checkbox-wrap { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--text-primary); }
+    .checkbox-wrap input { width: 18px; height: 18px; accent-color: var(--green); }
+    .back-btn { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; font-size: 14px; margin-bottom: 20px; border: none; background: none; cursor: pointer; }
+    .back-btn:hover { color: var(--text-primary); }
+    
+    .btn-add-user { background: var(--green); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .card-actions { position: absolute; top: 24px; right: 24px; display: flex; gap: 12px; }
+    .action-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 4px; transition: 0.2s; }
+    .action-btn:hover { background: rgba(255,255,255,0.05); }
+    .btn-edit { color: var(--text-secondary); }
+    .btn-delete { color: var(--error); }
+    
+    /* Modal Styles */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-content { background: var(--bg-card); border: 1px solid var(--border); padding: 32px; border-radius: 20px; width: 400px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-secondary); }
+    .form-group input { width: 100%; padding: 12px; border-radius: 10px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); outline: none; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+    .btn-cancel { background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <button class="back-btn" onclick="location.href='dashboard.html'">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Voltar ao Dashboard
+    </button>
+    
+    <div class="admin-header">
+      <div>
+        <!-- Integrações -->
+      <section class="admin-section">
+        <div class="section-header">
+          <h3>Integrações com N8N (Webhooks por Instância)</h3>
+        </div>
+        <div class="form-group" style="padding: 20px; background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color);">
+          <div id="webhooksList">
+             <div style="color:var(--text-muted); font-size: 13px;">Carregando instâncias...</div>
+          </div>
+          <button class="btn-save-notes" style="margin-top: 15px;" onclick="saveWebhooks()">Salvar Todos os Webhooks</button>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">
+            Cada instância envia mensagens pro seu respectivo bot no N8N.
+          </p>
+        </div>
+      </section>
+
+      <!-- Botões de Ação -->
+        <h1>Gestão de Acessos</h1>
+        <p style="color:var(--text-secondary)">Gerencie logins e vincule às instâncias</p>
+        <div class="card" style="margin-top:20px; border: 1px dashed var(--border); background: rgba(0,0,0,0.1);">
+          <h3 style="color:var(--green); font-size:14px; margin-bottom:10px">🤖 Envio de Mensagem pelo Bot (N8N)</h3>
+          <p style="font-size:13px; color:var(--text-secondary); line-height:1.5;">
+            Para que o N8N avise o Dashboard quando o Bot responder ao cliente, adicione um nó HTTP na sua automação apontando para:<br><br>
+            <strong style="color:white; background:var(--bg-panel); padding:4px 8px; border-radius:4px;">POST https://SEU-DOMINIO/api/bot-message</strong>
+            <br><br>
+            Payload JSON (Body Parameters):<br>
+            <code style="display:block; background:#0b141a; padding:10px; border-radius:8px; margin-top:5px; color:#53bdeb;">
+            {<br>
+              &nbsp;&nbsp;"instance": "Nome da Instancia",<br>
+              &nbsp;&nbsp;"phone": "5511999999999",<br>
+              &nbsp;&nbsp;"text": "Mensagem que o bot enviou"<br>
+            }
+            </code>
+          </p>
+        </div>
+      </div>
+      <button class="btn-add-user" onclick="openCreateModal()">+ Novo Usuário</button>
+    </div>
+
+    <div id="usersList">
+      <div style="text-align:center; padding: 40px; color: var(--text-muted)">Carregando usuários...</div>
+    </div>
+  </div>
+
+  <!-- User Modal (Create/Edit) -->
+  <div id="userModal" class="modal">
+    <div class="modal-content">
+      <h2 style="margin-bottom: 20px" id="modalTitle">Cadastrar Usuário</h2>
+      <form id="userForm" onsubmit="handleUserSubmit(event)">
+        <input type="hidden" id="userIdField">
+        <div class="form-group">
+          <label>Nome Completo</label>
+          <input type="text" id="userName" required>
+        </div>
+        <div class="form-group">
+          <label>E-mail (Login)</label>
+          <input type="email" id="userEmail" required>
+        </div>
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" id="userPassword" placeholder="Deixe em branco para manter">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-add-user">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+    let allInstances = [];
+    let currentUsers = [];
+
+    // Carregar dados iniciais
+    window.onload = async () => {
+      const token = localStorage.getItem('wp_crm_token');
+      if (!token) window.location.href = 'index.html';
+      
+      await loadAllInstances();
+      await renderWebhooksList();
+      await loadUsers();
+    };
+
+    async function apiFetch(path, method = 'GET', body = null) {
+      const token = localStorage.getItem('wp_crm_token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+
+      const options = {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : null
+      };
+
+      try {
+        const response = await fetch(`${API_URL}${path}`, options);
+        if (!response.ok) {
+          const errorData = await response.json();
+          alert(errorData.error || `Erro na requisição: ${response.status}`);
+          return null;
+        }
+        return await response.json();
+      } catch (error) {
+        console.error(`Erro na requisição ${path}:`, error);
+        alert('Erro de conexão com o servidor.');
+        return null;
+      }
+    }
+
+    async function renderWebhooksList() {
+      const container = document.getElementById('webhooksList');
+      container.innerHTML = '';
+      
+      const res = await apiFetch('/api/admin/settings');
+      const settings = res || {};
+
+      if (allInstances.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted); font-size: 13px;">Nenhuma instância encontrada para configurar webhook.</div>';
+        return;
+      }
+
+      allInstances.forEach(inst => {
+        const instId = inst.instanceName || inst.name || inst.id;
+        if (!instId) return;
+
+        const val = settings[`n8n_webhook_${instId}`] || '';
+        const id_field = `n8n_webhook_field_${instId}`;
+
+        const div = document.createElement('div');
+        div.style.marginBottom = '10px';
+        div.innerHTML = `
+          <label style="display:block; margin-bottom: 5px; font-weight: 500; font-size:13px; color: var(--text-secondary)">
+            Webhook para <strong style="color:white">${instId}</strong>
+          </label>
+          <input type="text" id="${id_field}" value="${val}" data-inst="${instId}" placeholder="https://n8n.seu-dominio.com/webhook/..." 
+            style="width: 100%; padding: 10px; background: #1a1d22; border: 1px solid #3b4a54; border-radius: 8px; color: white;">
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function saveWebhooks() {
+      const inputs = document.querySelectorAll('#webhooksList input[type="text"]');
+      const payload = {};
+      inputs.forEach(input => {
+        const instId = input.getAttribute('data-inst');
+        payload[`n8n_webhook_${instId}`] = input.value.trim();
+      });
+
+      const res = await apiFetch('/api/admin/settings', 'POST', payload);
+      if (res) {
+        alert('Webhooks salvos com sucesso!');
+      }
+    }
+
+    async function loadAllInstances() {
+      try {
+        const response = await fetch(`${API_URL}/api/whatsapp/instances`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}` }
+        });
+        allInstances = await response.json();
+      } catch (err) {
+        console.error('Erro ao carregar instâncias:', err);
+      }
+    }
+
+    async function loadUsers() {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/users`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}` }
+        });
+        currentUsers = await response.json();
+        renderUsers(currentUsers);
+      } catch (err) {
+        console.error('Erro ao carregar usuários:', err);
+      }
+    }
+
+    function renderUsers(users) {
+      const container = document.getElementById('usersList');
+      container.innerHTML = '';
+
+      users.forEach(user => {
+        if (user.role === 'admin') return;
+
+        const card = document.createElement('div');
+        card.className = 'user-card';
+        card.innerHTML = `
+          <div class="card-actions">
+            <button class="action-btn btn-edit" onclick="openEditModal(${user.id})" title="Editar Usuário">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path></svg>
+            </button>
+            <button class="action-btn btn-delete" onclick="deleteUser(${user.id})" title="Excluir Usuário">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+          <div class="user-info">
+            <div class="user-circle">${user.name.charAt(0)}</div>
+            <div>
+              <h3>${user.name}</h3>
+              <p style="color:var(--text-muted); font-size:13px">${user.email}</p>
+            </div>
+          </div>
+          <h4 style="font-size:13px; color:var(--text-primary); margin-bottom:12px; font-weight:600">🔌 Instâncias que este usuário pode acessar e responder:</h4>
+          <div class="instances-grid">
+            ${allInstances.map(inst => {
+              const instId = inst.instanceName || inst.name;
+              return `
+                <div class="instance-link-item">
+                  <label class="checkbox-wrap">
+                    <input type="checkbox" onchange="toggleLink(${user.id}, '${instId}', this)" ${user.instances?.includes(instId) ? 'checked' : ''}>
+                    ${instId}
+                  </label>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openCreateModal() {
+      document.getElementById('modalTitle').textContent = 'Cadastrar Usuário';
+      document.getElementById('userIdField').value = '';
+      document.getElementById('userForm').reset();
+      document.getElementById('userPassword').required = true;
+      document.getElementById('userModal').style.display = 'flex';
+    }
+
+    function openEditModal(id) {
+      const user = currentUsers.find(u => u.id === id);
+      if (!user) return;
+
+      document.getElementById('modalTitle').textContent = 'Editar Usuário';
+      document.getElementById('userIdField').value = user.id;
+      document.getElementById('userName').value = user.name;
+      document.getElementById('userEmail').value = user.email;
+      document.getElementById('userPassword').value = '';
+      document.getElementById('userPassword').required = false;
+      document.getElementById('userModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('userModal').style.display = 'none';
+    }
+
+    async function handleUserSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('userIdField').value;
+      const name = document.getElementById('userName').value;
+      const email = document.getElementById('userEmail').value;
+      const password = document.getElementById('userPassword').value;
+
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `${API_URL}/api/admin/users/${id}` : `${API_URL}/api/admin/users`;
+
+      try {
+        const response = await fetch(endpoint, {
+          method,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}`
+          },
+          body: JSON.stringify({ name, email, password })
+        });
+
+        if (response.ok) {
+          closeModal();
+          await loadUsers();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Erro ao salvar usuário');
+        }
+      } catch (err) {
+        alert('Erro de conexão');
+      }
+    }
+
+    async function deleteUser(id) {
+      if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/admin/users/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}` }
+        });
+
+        if (response.ok) {
+          await loadUsers();
+        } else {
+          alert('Erro ao deletar');
+        }
+      } catch (err) {
+        alert('Erro de conexão');
+      }
+    }
+
+    async function toggleLink(userId, instanceName, checkbox) {
+      const action = checkbox.checked ? 'add' : 'remove';
+      
+      try {
+        const response = await fetch(`${API_URL}/api/admin/link-user-instance`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}`
+          },
+          body: JSON.stringify({ userId, instanceName, action })
+        });
+
+        if (!response.ok) {
+          checkbox.checked = !checkbox.checked;
+          alert('Erro ao atualizar vínculo');
+        }
+      } catch (err) {
+        checkbox.checked = !checkbox.checked;
+        alert('Erro de conexão');
+      }
+    }
+  </script>
+</body>
+</html>

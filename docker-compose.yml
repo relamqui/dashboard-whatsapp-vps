@@ -1,0 +1,40 @@
+# WPCRM — Docker Compose para Easypanel / VPS
+# Suba esse arquivo em um Stack no Easypanel OU rode localmente com: docker compose up -d
+
+services:
+  database:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wpcrm}
+      POSTGRES_USER: ${POSTGRES_USER:-wpcrm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wpcrm_pass_secure}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wpcrm_user} -d ${POSTGRES_DB:-wpcrm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wpcrm:
+    build: .
+    ports:
+      - "${APP_PORT:-3008}:3008"
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      - PORT=3008
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-wpcrm_user}:${POSTGRES_PASSWORD:-wpcrm_pass_secure}@database:5432/${POSTGRES_DB:-wpcrm}
+      - JWT_SECRET=${JWT_SECRET}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - DB_PATH=/app/data/db.json
+    volumes:
+      - wpcrm_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  wpcrm_data:

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WP CRM — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/login.css" />
+</head>
+<body>
+  <div class="bg-animation">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="login-wrapper">
+    <div class="login-card">
+      <!-- Logo -->
+      <div class="logo-area">
+        <div class="logo-icon">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 3C9.37 3 4 8.37 4 15c0 2.39.68 4.63 1.86 6.53L4 29l7.67-1.83C13.35 28.03 14.65 28 16 28c6.63 0 12-5.37 12-12S22.63 3 16 3z" fill="#00a884"/>
+            <path d="M11.5 10.5c-.28 0-.73.1-1.11.52-.38.42-1.45 1.42-1.45 3.46s1.49 4.01 1.7 4.29c.21.28 2.91 4.65 7.14 6.32 3.54 1.4 4.26.01 5.03-.12.77-.13 2.49-1.02 2.84-2 .35-.99.35-1.84.25-2.01-.1-.18-.38-.28-1.1-.63-.73-.35-4.48-2.21-5.17-2.46-.69-.25-1.19-.38-1.69.38-.5.76-1.94 2.46-2.38 2.97-.44.51-.88.57-1.63.19-.75-.38-3.17-1.17-6.04-3.73-2.23-1.99-3.74-4.45-4.18-5.2-.44-.76-.05-1.17.33-1.55.34-.34.75-.88 1.13-1.32.38-.44.5-.76.76-1.26.25-.5.13-1.57-.03-2.01-.16-.44-.78-1.87-1.14-2.65z" fill="white"/>
+          </svg>
+        </div>
+        <h1 class="logo-title">WP<span>CRM</span></h1>
+        <p class="logo-subtitle">Central de Atendimento WhatsApp</p>
+      </div>
+
+      <!-- Form -->
+      <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="email">E-mail</label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
+            </span>
+            <input type="email" id="email" name="email" placeholder="seu@email.com" required autocomplete="email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
+            <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+            <button type="button" class="toggle-password" onclick="togglePassword()" id="toggleBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="remember" />
+            <span class="checkmark"></span>
+            Lembrar acesso
+          </label>
+          <a href="#" class="forgot-link">Esqueceu a senha?</a>
+        </div>
+
+        <button type="submit" class="btn-login" id="submitBtn">
+          <span class="btn-text">Entrar</span>
+          <span class="btn-loader" style="display:none">
+            <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="30 70"/></svg>
+          </span>
+        </button>
+
+        <div class="error-message" id="errorMsg" style="display:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="errorText">Credenciais inválidas.</span>
+        </div>
+      </form>
+
+      <p class="login-footer">© 2025 WPCRM · Todos os direitos reservados</p>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const btnText = btn.querySelector('.btn-text');
+      const btnLoader = btn.querySelector('.btn-loader');
+      const errorMsg = document.getElementById('errorMsg');
+
+      btnText.style.display = 'none';
+      btnLoader.style.display = 'flex';
+      btn.disabled = true;
+      errorMsg.style.display = 'none';
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Store token and user info
+          localStorage.setItem('wp_crm_token', data.token);
+          localStorage.setItem('wp_crm_user', JSON.stringify(data.user));
+          window.location.href = 'dashboard.html';
+        } else {
+          throw new Error(data.error || 'Credenciais invlidas');
+        }
+      } catch (err) {
+        btnText.style.display = 'inline';
+        btnLoader.style.display = 'none';
+        btn.disabled = false;
+        errorMsg.style.display = 'flex';
+        document.getElementById('errorText').textContent = err.message + '. Tente: admin@empresa.com / 123456';
+      }
+    }
+
+    function togglePassword() {
+      const input = document.getElementById('password');
+      const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+      input.setAttribute('type', type);
+    }
+  </script>
+</body>
+</html>
