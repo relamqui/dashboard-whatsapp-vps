@@ -621,8 +621,8 @@
             <div>
               <h3>${user.name}</h3>
               <p style="color:var(--text-muted); font-size:13px">${user.email} ${user.phone ? `&bull; 📱 ${user.phone}` : ''}</p>
-              ${user.filial_id ? `<p style="color:var(--green); font-size:12px; margin-top:4px;">Filial ID: ${user.filial_id}</p>` : ''}
-              ${user.setor_id ? `<p style="color:var(--green); font-size:12px; margin-top:4px;">Setor ID: ${user.setor_id}</p>` : ''}
+              ${user.filial_id ? `<p style="color:var(--green); font-size:12px; margin-top:4px;">🏢 Filial: ${allFiliais.find(f => f.id === user.filial_id)?.name || user.filial_id}</p>` : ''}
+              ${user.setor_id ? `<p style="color:var(--green); font-size:12px; margin-top:4px;">📁 Setor: ${allSetores.find(s => s.id === user.setor_id)?.name || user.setor_id}</p>` : ''}
             </div>
           </div>
           <h4 style="font-size:13px; color:var(--text-primary); margin-bottom:12px; font-weight:600">🔌 Instâncias que este usuário pode acessar e responder:</h4>
