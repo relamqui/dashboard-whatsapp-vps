@@ -66,6 +66,8 @@ class User(db_sql.Model):
     instances = db_sql.Column(db_sql.JSON, default=[]) # Nomes das instâncias vinculadas
     filial_id = db_sql.Column(db_sql.Integer, db_sql.ForeignKey('filial.id'), nullable=True)
     setor_id = db_sql.Column(db_sql.Integer, db_sql.ForeignKey('setor.id'), nullable=True)
+    filial = db_sql.Column(db_sql.String(150), nullable=True)
+    setor = db_sql.Column(db_sql.String(150), nullable=True)
 
 class Contact(db_sql.Model):
     id = db_sql.Column(db_sql.String(150), primary_key=True) # c_phone_instance
@@ -137,6 +139,13 @@ def migrate_to_sql():
         try:
             db_sql.session.execute(db_sql.text('ALTER TABLE "user" ADD COLUMN filial_id INTEGER REFERENCES filial(id)'))
             db_sql.session.execute(db_sql.text('ALTER TABLE "user" ADD COLUMN setor_id INTEGER REFERENCES setor(id)'))
+            db_sql.session.commit()
+        except Exception:
+            db_sql.session.rollback()
+            
+        try:
+            db_sql.session.execute(db_sql.text('ALTER TABLE "user" ADD COLUMN filial VARCHAR(150)'))
+            db_sql.session.execute(db_sql.text('ALTER TABLE "user" ADD COLUMN setor VARCHAR(150)'))
             db_sql.session.commit()
         except Exception:
             db_sql.session.rollback()
@@ -384,7 +393,9 @@ def create_user():
         role='user',
         instances=[],
         filial_id=data.get('filial_id'),
-        setor_id=data.get('setor_id')
+        setor_id=data.get('setor_id'),
+        filial=data.get('filial'),
+        setor=data.get('setor')
     )
     db_sql.session.add(new_user)
     db_sql.session.commit()
@@ -419,6 +430,10 @@ def manage_user(user_id):
             user.filial_id = data.get('filial_id')
         if 'setor_id' in data:
             user.setor_id = data.get('setor_id')
+        if 'filial' in data:
+            user.filial = data.get('filial')
+        if 'setor' in data:
+            user.setor = data.get('setor')
         db_sql.session.commit()
         return jsonify({
             'id': user.id,
@@ -559,7 +574,9 @@ def gestor_manage_users():
             role='user',
             instances=list(instances_to_assign),
             filial_id=data.get('filial_id'),
-            setor_id=data.get('setor_id')
+            setor_id=data.get('setor_id'),
+            filial=data.get('filial'),
+            setor=data.get('setor')
         )
         db_sql.session.add(novo_usr)
         db_sql.session.commit()
@@ -582,7 +599,9 @@ def gestor_manage_users():
             'phone': u.phone,
             'instances': u.instances or [],
             'filial_id': u.filial_id,
-            'setor_id': u.setor_id
+            'setor_id': u.setor_id,
+            'filial': u.filial,
+            'setor': u.setor
         })
     return jsonify(users_list)
 
@@ -617,6 +636,10 @@ def gestor_update_user(user_id):
             target_user.filial_id = data.get('filial_id')
         if 'setor_id' in data:
             target_user.setor_id = data.get('setor_id')
+        if 'filial' in data:
+            target_user.filial = data.get('filial')
+        if 'setor' in data:
+            target_user.setor = data.get('setor')
             
         db_sql.session.commit()
         return jsonify({'success': True})

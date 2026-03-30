@@ -684,11 +684,23 @@
       const password = document.getElementById('userPassword').value;
       const setorIdStr = document.getElementById('userSetor').value;
       const setor_id = setorIdStr ? parseInt(setorIdStr) : null;
+      let setor_name = null;
+
       const filialIdStr = document.getElementById('userFilial').value;
       let filial_id = filialIdStr ? parseInt(filialIdStr) : null;
+      let filial_name = null;
+
+      if (filial_id) {
+        const foundF = allFiliais.find(x => x.id === filial_id);
+        if (foundF) filial_name = foundF.name;
+      }
+      
       if (setor_id) {
-        const s = allSetores.find(x => x.id === setor_id);
-        if (s) filial_id = s.filial_id;
+        const foundS = allSetores.find(x => x.id === setor_id);
+        if (foundS) {
+            setor_name = foundS.name;
+            filial_id = foundS.filial_id; // Garantir a corretude da árvore
+        }
       }
 
       const method = id ? 'PUT' : 'POST';
@@ -699,7 +711,7 @@
         endpoint = id ? `${API_URL}/api/admin/users/${id}` : `${API_URL}/api/admin/users`;
       }
 
-      let payload = { name, email, phone, password, setor_id, filial_id };
+      let payload = { name, email, phone, password, setor_id, filial_id, filial: filial_name, setor: setor_name };
       if (currentUserRole === 'gestor' && !id) {
         if (allInstances.length > 0) {
           const inst = allInstances[0].instanceName || allInstances[0].name;
