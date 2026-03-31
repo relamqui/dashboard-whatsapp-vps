@@ -1,5 +1,5 @@
 /* ===========================
-   LOGIN PAGE - WPCRM
+   LOGIN PAGE - SynkAI
    =========================== */
 
 *, *::before, *::after {
@@ -9,9 +9,9 @@
 }
 
 :root {
-  --green: #00a884;
-  --green-light: #25d366;
-  --green-dark: #008f6f;
+  --orange: #F5851F;
+  --orange-light: #FFa347;
+  --orange-dark: #D96E0A;
   --bg-primary: #0b0d0f;
   --bg-card: #111417;
   --bg-input: #1a1d22;
@@ -53,19 +53,19 @@ body {
 
 .orb-1 {
   width: 500px; height: 500px;
-  background: var(--green);
+  background: var(--orange);
   top: -150px; left: -100px;
   animation-delay: 0s;
 }
 .orb-2 {
   width: 350px; height: 350px;
-  background: #0d7377;
+  background: #D96E0A;
   bottom: -100px; right: -80px;
   animation-delay: -4s;
 }
 .orb-3 {
   width: 250px; height: 250px;
-  background: var(--green-light);
+  background: var(--orange-light);
   top: 50%; left: 55%;
   animation-delay: -8s;
 }
@@ -106,30 +106,12 @@ body {
   margin-bottom: 36px;
 }
 
-.logo-icon {
-  width: 64px; height: 64px;
-  background: linear-gradient(135deg, #0d7377, #00a884);
-  border-radius: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-  box-shadow: 0 8px 32px rgba(0,168,132,0.35);
-}
-
-.logo-icon svg {
-  width: 36px; height: 36px;
-}
-
-.logo-title {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  color: var(--text-primary);
-}
-
-.logo-title span {
-  color: var(--green);
+.logo-image {
+  max-width: 310px;
+  width: 100%;
+  height: auto;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 4px 16px rgba(245, 133, 31, 0.25));
 }
 
 .logo-subtitle {
@@ -187,9 +169,9 @@ body {
 }
 
 .input-wrapper input:focus {
-  border-color: var(--green);
-  background: rgba(0,168,132,0.05);
-  box-shadow: 0 0 0 3px rgba(0,168,132,0.12);
+  border-color: var(--orange);
+  background: rgba(245,133,31,0.05);
+  box-shadow: 0 0 0 3px rgba(245,133,31,0.12);
 }
 
 .input-wrapper input::placeholder {
@@ -231,25 +213,25 @@ body {
 
 .checkbox-label input[type="checkbox"] {
   width: 16px; height: 16px;
-  accent-color: var(--green);
+  accent-color: var(--orange);
   cursor: pointer;
 }
 
 .forgot-link {
   font-size: 13px;
-  color: var(--green);
+  color: var(--orange);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
 }
 
-.forgot-link:hover { color: var(--green-light); }
+.forgot-link:hover { color: var(--orange-light); }
 
 /* ---- Button ---- */
 .btn-login {
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, var(--green-dark), var(--green));
+  background: linear-gradient(135deg, var(--orange-dark), var(--orange));
   border: none;
   border-radius: 12px;
   color: white;
@@ -262,14 +244,14 @@ body {
   justify-content: center;
   gap: 8px;
   transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
-  box-shadow: 0 4px 20px rgba(0,168,132,0.35);
+  box-shadow: 0 4px 20px rgba(245,133,31,0.35);
   letter-spacing: 0.3px;
   margin-top: 4px;
 }
 
 .btn-login:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(0,168,132,0.45);
+  box-shadow: 0 8px 28px rgba(245,133,31,0.45);
 }
 
 .btn-login:active:not(:disabled) { transform: translateY(0); }

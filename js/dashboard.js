@@ -80,7 +80,14 @@ function initSocket(token) {
     
     socket.on('connect', () => {
       console.log('Conectado ao Backend WPCRM via Socket');
-      socket.emit('join_company', 'comp_1'); // Mock company ID
+      socket.emit('join_company', 'comp_1');
+      
+      // Join instance rooms for isolation
+      const userData = JSON.parse(localStorage.getItem('wp_crm_user') || '{}');
+      socket.emit('join_instances', {
+        instances: userData.instances || [],
+        role: userData.role || 'user'
+      });
     });
 
     socket.on('whatsapp_event', (data) => {
@@ -92,13 +99,29 @@ function initSocket(token) {
     });
 
     socket.on('chat_tags_updated', (data) => {
-      const contact = CONTACTS.find(c => c.id === data.id);
+      console.log('[Socket] chat_tags_updated recebido:', data);
+      let contact = CONTACTS.find(c => c.id === data.id);
+      
+      // Fallback: busca por phone extraído do ID (c_PHONE_INSTANCE)
+      if (!contact && data.id) {
+        const parts = data.id.split('_');
+        if (parts.length >= 2) {
+          const phone = parts[1];
+          contact = CONTACTS.find(c => c.phone === phone || c.id.includes(phone));
+        }
+      }
+      
       if (contact) {
         contact.tags = data.tags;
-        if (currentChat && currentChat.id === data.id) {
+        if (currentChat && currentChat.id === contact.id) {
+            currentChat.tags = data.tags;
             updateContactDetails(currentChat);
         }
         renderChatList(getFilteredContacts());
+        renderTagFilter();
+        console.log('[Socket] Tags atualizadas para:', contact.id, data.tags);
+      } else {
+        console.warn('[Socket] Contato não encontrado para atualizar tags:', data.id);
       }
     });
   } else {
@@ -466,6 +489,8 @@ function renderMessages(messages) {
             const isOut = msg.type === 'out';
             messageContent = buildWaAudioHTML(rawSrc, avatarLetter, isOut);
         }
+    } else {
+        messageContent = escapeHtml(messageContent).replace(/\n/g, '<br>');
     }
 
     el.innerHTML = `
@@ -926,7 +951,7 @@ function updateContactDetails(contact) {
   contact.tags.forEach(tag => {
     const el = document.createElement('div');
     el.className = 'tag ' + tagColor(tag);
-    el.textContent = tag;
+    el.innerHTML = `<span>${escapeHtml(tag)}</span><span style="cursor:pointer;margin-left:6px;opacity:0.7;font-weight:bold" onclick="removeTag('${tag.replace(/'/g, "\\'")}')" title="Remover etiqueta">✕</span>`;
     tagsArea.appendChild(el);
   });
   const addBtn = document.createElement('button');
@@ -1481,11 +1506,38 @@ function handleChatAssignment(data) {
 }
 
 // ─── Misc ─────────────────────────────────────────────────────────────────────
+async function saveTagsToBackend(contactId, tags) {
+  try {
+    const res = await fetch(`${API_URL}/api/contacts/${contactId}`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}`
+      },
+      body: JSON.stringify({ tags })
+    });
+    if (!res.ok) showToast('Erro ao salvar etiquetas');
+  } catch(e) { console.error('Erro ao salvar etiquetas', e); }
+}
+
 function addTag() {
-  const tag = prompt('Nome da etiqueta:');
-  if (tag && currentChat) {
-    currentChat.tags.push(tag);
+  const input = prompt('Nome da etiqueta:');
+  if (input && input.trim() && currentChat) {
+    const tag = input.trim();
+    if (!currentChat.tags) currentChat.tags = [];
+    if (!currentChat.tags.includes(tag)) {
+      currentChat.tags.push(tag);
+      updateContactDetails(currentChat);
+      saveTagsToBackend(currentChat.id, currentChat.tags);
+    }
+  }
+}
+
+function removeTag(tagToRemove) {
+  if (currentChat && currentChat.tags) {
+    currentChat.tags = currentChat.tags.filter(t => t !== tagToRemove);
     updateContactDetails(currentChat);
+    saveTagsToBackend(currentChat.id, currentChat.tags);
   }
 }
 
@@ -1605,25 +1657,7 @@ function startNewChat() {
 
   closeNewChatModal();
   renderChatList(getFilteredContacts());
-  
-  // Sincroniza com o backend enviando um "ping"
-  fetch(`${API_URL}/api/whatsapp/send`, {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}`
-    },
-    body: JSON.stringify({
-      instance: instance,
-      number: number,
-      text: 'Novo chat iniciado via CRM' 
-    })
-  }).then(() => {
-    openChat(contact.id);
-  }).catch(err => {
-    console.error('Erro ao sincronizar novo chat:', err);
-    openChat(contact.id);
-  });
+  openChat(contact.id);
 }
 
 function logout() {

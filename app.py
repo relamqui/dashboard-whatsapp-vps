@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit, join_room
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm.attributes import flag_modified
 import requests
 from dotenv import load_dotenv
 import json
@@ -286,11 +287,29 @@ def add_bot_tag():
     if not phone or not inst:
         return jsonify({'error': 'phone e instance são obrigatórios'}), 400
         
-    phone = normalize_br_phone(str(phone))
+    phone = normalize_br_phone(str(phone).strip())
+    inst = str(inst).strip()
     contact_id = f"c_{phone}_{inst}"
     
+    print(f"[BOT/TAGS] Buscando contato: id={contact_id}, phone={phone}, instance={inst}")
+    
+    # Tentativa 1: busca pelo ID exato
     contact = Contact.query.filter_by(id=contact_id).first()
+    
+    # Tentativa 2: busca pelo phone + instance (caso o ID tenha alguma diferença)
     if not contact:
+        contact = Contact.query.filter_by(phone=phone, instance=inst).first()
+        if contact:
+            print(f"[BOT/TAGS] Encontrado por phone+instance: {contact.id}")
+    
+    # Tentativa 3: busca apenas pelo phone (pega o mais recente)
+    if not contact:
+        contact = Contact.query.filter_by(phone=phone).first()
+        if contact:
+            print(f"[BOT/TAGS] Encontrado apenas por phone: {contact.id} (instance no banco: {contact.instance})")
+    
+    if not contact:
+        print(f"[BOT/TAGS] Contato não encontrado, criando novo: {contact_id}")
         contact = Contact(
             id=contact_id, name=f"+{phone}", phone=phone,
             avatar=phone[0] if phone else "?", instance=inst,
@@ -299,32 +318,34 @@ def add_bot_tag():
         db_sql.session.add(contact)
         db_sql.session.flush()
         
-    tags = list(contact.tags or [])
-    new_tags_added = False
+    new_tags = []
     
     if filial and setor:
-        tag_str = f"{filial} - {setor}"
-        if tag_str not in tags:
-            tags.append(tag_str)
-            new_tags_added = True
+        new_tags.append(f"{filial} - {setor}")
     elif filial:
-        if filial not in tags:
-            tags.append(filial)
-            new_tags_added = True
+        new_tags.append(filial)
             
-    if custom_tag and custom_tag not in tags:
-        tags.append(custom_tag)
-        new_tags_added = True
+    if custom_tag:
+        new_tags.append(custom_tag)
         
-    if new_tags_added:
-        contact.tags = tags
+    if new_tags:
+        contact.tags = new_tags
+        flag_modified(contact, 'tags')
         db_sql.session.commit()
+        print(f"[BOT/TAGS] Tags atualizadas para '{contact.id}': {contact.tags}")
+        _inst_room = contact.instance or 'unknown'
         socketio.emit('chat_tags_updated', {
             'id': contact.id,
-            'tags': contact.tags
-        })
+            'tags': list(contact.tags)
+        }, room=f'instance_{_inst_room}')
+        socketio.emit('chat_tags_updated', {
+            'id': contact.id,
+            'tags': list(contact.tags)
+        }, room='admin')
+    else:
+        print(f"[BOT/TAGS] Nenhuma tag para aplicar (filial={filial}, setor={setor}, tag={custom_tag})")
         
-    return jsonify({'success': True, 'tags': contact.tags}), 200
+    return jsonify({'success': True, 'contact_id': contact.id, 'tags': contact.tags}), 200
 
 # ─── Webhooks Evolution API ────────────────────────────────────────────────────────────
 
@@ -714,6 +735,13 @@ def send_message():
     
     if not inst or not number:
         return jsonify({'error': 'Instância e número são obrigatórios'}), 400
+
+    # --- Instance permission check ---
+    if request.user.get('role') != 'admin':
+        user_obj_check = User.query.get(request.user['id'])
+        allowed = user_obj_check.instances or []
+        if inst not in allowed:
+            return jsonify({'error': 'Você não tem permissão para enviar mensagens nesta instância.'}), 403
 
     # --- Chat locking check ---
     contact_id_check = f"c_{number}_{inst}"
@@ -1137,6 +1165,7 @@ def bot_message_webhook():
             if 'BOT' not in tags:
                 tags.append('BOT')
                 contact.tags = tags
+                flag_modified(contact, 'tags')
         else:
             new_contact = Contact(
                 id=contact_id, name=f"+{phone}", phone=phone,
@@ -1170,7 +1199,8 @@ def bot_message_webhook():
                 "message": {"conversation": text}
             }
         }
-        socketio.emit('whatsapp_event', fake_event)
+        socketio.emit('whatsapp_event', fake_event, room=f'instance_{inst}')
+        socketio.emit('whatsapp_event', fake_event, room='admin')
         
         return jsonify({"success": True, "message_id": msg_id}), 200
     except Exception as e:
@@ -1296,7 +1326,8 @@ def webhook():
             emit_data = dict(data)
             emit_data['_processed_text'] = text
             emit_data['_instance'] = instance
-            socketio.emit('whatsapp_event', emit_data)
+            socketio.emit('whatsapp_event', emit_data, room=f'instance_{instance}')
+            socketio.emit('whatsapp_event', emit_data, room='admin')
         return 'OK', 200
     except Exception as e:
         print(f"Erro webhook: {e}")
@@ -1335,27 +1366,43 @@ def get_contacts():
 @auth_required
 def update_contact(id):
     data = request.json
-    new_name = data.get('name')
-    
-    if not new_name:
-        return jsonify({'error': 'Nome é obrigatório'}), 400
-        
     contact = Contact.query.filter_by(id=id).first()
-    if contact:
+    
+    if not contact:
+        return jsonify({'error': 'Contato não encontrado'}), 404
+        
+    if 'name' in data:
+        new_name = data.get('name')
+        if not new_name:
+            return jsonify({'error': 'Nome é obrigatório'}), 400
         contact.name = new_name
-        # Update avatar initial if it was autogenerated (was just phone first digit)
         if contact.avatar and len(contact.avatar) <= 1:
             contact.avatar = new_name[0].upper()
+            
+    if 'tags' in data:
+        contact.tags = data.get('tags')
+        flag_modified(contact, 'tags')
         
-        db_sql.session.commit()
-        return jsonify({
-            'id': contact.id,
-            'name': contact.name,
-            'phone': contact.phone,
-            'avatar': contact.avatar
-        })
+    db_sql.session.commit()
     
-    return jsonify({'error': 'Contato não encontrado'}), 404
+    if 'tags' in data:
+        _inst_room = contact.instance or 'unknown'
+        socketio.emit('chat_tags_updated', {
+            'id': contact.id,
+            'tags': list(contact.tags or [])
+        }, room=f'instance_{_inst_room}')
+        socketio.emit('chat_tags_updated', {
+            'id': contact.id,
+            'tags': list(contact.tags or [])
+        }, room='admin')
+        
+    return jsonify({
+        'id': contact.id,
+        'name': contact.name,
+        'phone': contact.phone,
+        'avatar': contact.avatar,
+        'tags': contact.tags
+    })
 
 @app.route('/api/contacts/<id>/messages', methods=['GET'])
 @auth_required
@@ -1391,13 +1438,9 @@ def assign_chat(id):
     contact.assigned_to = user.id
     contact.assigned_name = user.name
     
-    tags = list(contact.tags or [])
-    if 'BOT' in tags:
-        tags.remove('BOT')
     atendente_tag = f"Atendente: {user.name}"
-    if atendente_tag not in tags:
-        tags.append(atendente_tag)
-    contact.tags = tags
+    contact.tags = [atendente_tag]
+    flag_modified(contact, 'tags')
     
     db_sql.session.commit()
     
@@ -1429,13 +1472,21 @@ def assign_chat(id):
     except Exception as e:
         print(f"Erro webhook corpal (assign): {e}")
     
+    _inst_room = contact.instance or 'unknown'
     socketio.emit('chat_assignment', {
         'contact_id': id,
         'assigned_to': user.id,
         'assigned_name': user.name,
         'tags': contact.tags,
         'action': 'assign'
-    })
+    }, room=f'instance_{_inst_room}')
+    socketio.emit('chat_assignment', {
+        'contact_id': id,
+        'assigned_to': user.id,
+        'assigned_name': user.name,
+        'tags': contact.tags,
+        'action': 'assign'
+    }, room='admin')
     
     return jsonify({
         'success': True,
@@ -1466,6 +1517,7 @@ def release_chat(id):
     if atendente_tag in tags:
         tags.remove(atendente_tag)
     contact.tags = tags
+    flag_modified(contact, 'tags')
     
     db_sql.session.commit()
     
@@ -1500,13 +1552,21 @@ def release_chat(id):
         print(f"Erro webhook corpal (release): {e}")
     
     # Emitir socket para todos os clientes atualizarem
+    _inst_room = contact.instance or 'unknown'
     socketio.emit('chat_assignment', {
         'contact_id': id,
         'assigned_to': None,
         'assigned_name': None,
         'tags': contact.tags,
         'action': 'release'
-    })
+    }, room=f'instance_{_inst_room}')
+    socketio.emit('chat_assignment', {
+        'contact_id': id,
+        'assigned_to': None,
+        'assigned_name': None,
+        'tags': contact.tags,
+        'action': 'release'
+    }, room='admin')
     
     return jsonify({
         'success': True,
@@ -1598,6 +1658,8 @@ def serve_frontend(path):
         return send_from_directory(ROOT_DIR, path)
     if path.startswith('css/') or path.startswith('js/'):
         return send_from_directory(ROOT_DIR, path)
+    if path.lower().endswith(('.png', '.jpg', '.jpeg', '.svg', '.ico', '.webp')):
+        return send_from_directory(ROOT_DIR, path)
     return jsonify({'error': 'Not found'}), 404
 
 @socketio.on('connect')
@@ -1608,6 +1670,21 @@ def test_connect():
 def on_join(company_id):
     join_room(company_id)
     print(f'Client joined room: {company_id}')
+
+@socketio.on('join_instances')
+def on_join_instances(data):
+    """Usuário entra nas rooms das instâncias que tem acesso."""
+    instances = data.get('instances', [])
+    role = data.get('role', 'user')
+    
+    for inst_name in instances:
+        room_name = f'instance_{inst_name}'
+        join_room(room_name)
+        print(f'Client joined instance room: {room_name}')
+    
+    if role == 'admin':
+        join_room('admin')
+        print('Client joined admin room')
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 3008))

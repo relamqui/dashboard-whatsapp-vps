@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WP CRM — Login</title>
+  <title>SynkAI — Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -20,14 +20,8 @@
     <div class="login-card">
       <!-- Logo -->
       <div class="logo-area">
-        <div class="logo-icon">
-          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 3C9.37 3 4 8.37 4 15c0 2.39.68 4.63 1.86 6.53L4 29l7.67-1.83C13.35 28.03 14.65 28 16 28c6.63 0 12-5.37 12-12S22.63 3 16 3z" fill="#00a884"/>
-            <path d="M11.5 10.5c-.28 0-.73.1-1.11.52-.38.42-1.45 1.42-1.45 3.46s1.49 4.01 1.7 4.29c.21.28 2.91 4.65 7.14 6.32 3.54 1.4 4.26.01 5.03-.12.77-.13 2.49-1.02 2.84-2 .35-.99.35-1.84.25-2.01-.1-.18-.38-.28-1.1-.63-.73-.35-4.48-2.21-5.17-2.46-.69-.25-1.19-.38-1.69.38-.5.76-1.94 2.46-2.38 2.97-.44.51-.88.57-1.63.19-.75-.38-3.17-1.17-6.04-3.73-2.23-1.99-3.74-4.45-4.18-5.2-.44-.76-.05-1.17.33-1.55.34-.34.75-.88 1.13-1.32.38-.44.5-.76.76-1.26.25-.5.13-1.57-.03-2.01-.16-.44-.78-1.87-1.14-2.65z" fill="white"/>
-          </svg>
-        </div>
-        <h1 class="logo-title">WP<span>CRM</span></h1>
-        <p class="logo-subtitle">Central de Atendimento WhatsApp</p>
+        <img src="Logo.png" alt="SynkAI" class="logo-image" />
+        <p class="logo-subtitle">Central de Atendimento Inteligente</p>
       </div>
 
       <!-- Form -->
@@ -77,7 +71,7 @@
         </div>
       </form>
 
-      <p class="login-footer">© 2025 WPCRM · Todos os direitos reservados</p>
+      <p class="login-footer">© 2026 SynkAI · Todos os direitos reservados</p>
     </div>
   </div>
 
@@ -121,7 +115,7 @@
         btnLoader.style.display = 'none';
         btn.disabled = false;
         errorMsg.style.display = 'flex';
-        document.getElementById('errorText').textContent = err.message + '. Tente: admin@empresa.com / 123456';
+        document.getElementById('errorText').textContent = err.message;
       }
     }
 
